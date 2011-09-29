@@ -1,0 +1,1 @@
+Boilerplate code taken from CPUBurn 1.4. Instructions were hand-optimized to fill up Atom pipeline. No error checking because it leads lower power.
