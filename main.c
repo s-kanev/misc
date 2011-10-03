@@ -9,6 +9,10 @@
 static const char *default_counters[]={
     "PERF_COUNT_HW_CPU_CYCLES",
     "PERF_COUNT_HW_INSTRUCTIONS",
+    "PERF_COUNT_HW_BRANCH_INSTRUCTIONS",
+    "PERF_COUNT_HW_BRANCH_MISSES",
+    "PERF_COUNT_HW_CACHE_L1D:ACCESS",
+    "PERF_COUNT_HW_CACHE_L1D:MISS",
     NULL
 };
 
@@ -106,10 +110,22 @@ void stop_counters() {
     }
 }
 
+int fib(int n)
+{
+  if(n<=1)
+    return 1;
+  else
+    return fib(n-1)+fib(n-2);
+}
+
 int main(int argc, char** argv) {
 
     init_counters(default_counters);
     start_counters();
+
+    int i;
+    for (i=0; i<33; i++)
+        fib(i);
 
     stop_counters();
     deinit_counters();
