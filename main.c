@@ -18,6 +18,7 @@ static const char *default_counters[]={
 
 perf_event_desc_t *fds = NULL;
 int num_fds = 0;
+uint64_t *counter_values = NULL;
 
 int init_counters(const char** counters) {
     /* Initialize pfm library */
@@ -48,10 +49,14 @@ int init_counters(const char** counters) {
             return -1;
         }
     }
+
+    counter_values = (uint64_t*) malloc(num_fds * sizeof(uint64_t));
 }
 
 int deinit_counters() {
     free(fds);
+
+    free(counter_values);
 
     /* Free libpfm rsources */
     pfm_terminate();
@@ -65,7 +70,7 @@ void start_counters() {
         fprintf(stderr, "prctl(enable) failed\n");
 }
 
-void stop_counters() {
+uint64_t *stop_counters() {
     int ret, i;
     uint64_t values[3];
 
@@ -99,15 +104,20 @@ void stop_counters() {
         val = perf_scale(values);
         ratio = perf_scale_ratio(values);
 
+        counter_values[i] = val;
+#ifdef VERBOSE
         printf("%'20"PRIu64" %s (%.2f%% scaling, ena=%'"PRIu64", run=%'"PRIu64")\n",
             val,
             fds[i].name,
             (1.0-ratio)*100.0,
             values[1],
             values[2]);
+#endif
 
             close(fds[i].fd);
     }
+
+    return counter_values;
 }
 
 int fib(int n)

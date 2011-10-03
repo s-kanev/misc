@@ -2,13 +2,13 @@ CC=gcc
 OEXT=o
 EEXT=
 
-CFLAGS=-g -I.
-LDFLAGS=-g -L. -lpfm
+CFLAGS=-g -m32 -I. -DVERBOSE
+LDFLAGS=-g -m32
 
 default: test
 
 test: main.$(OEXT) perf_util.$(OEXT) 
-	$(CC) $(LDFLAGS) -o main$(EEXT) $^ 
+	$(CC) $(LDFLAGS) -o main$(EEXT) $^ libpfm.a
 
 .$(OEXT): .c
 	$(CC) $(CFLAGS) -c $*.c
