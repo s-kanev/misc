@@ -2,8 +2,8 @@ CC=gcc
 OEXT=o
 EEXT=
 
-CFLAGS=-g
-LDFLAGS=-g -lpfm
+CFLAGS=-g -I.
+LDFLAGS=-g -L. -lpfm
 
 default: test
 
