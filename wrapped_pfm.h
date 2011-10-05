@@ -18,6 +18,8 @@ extern int start_counters(void);
 
 /* 
  * Stop collecting counter values.
- * Returns arrat of counter values.
+ * Returns array of counter values.
+ * reset_counters != 0 will reset counter state.
+ * reste_counters == 0 will keep accumulating them.
  */
-extern uint64_t *stop_counters(void);
+extern uint64_t *stop_counters(int reset_counters);

@@ -23,18 +23,23 @@ int fib(int n)
 }
 
 int main(int argc, char** argv) {
+    int i,j;
 
     init_counters(default_counters);
-    start_counters();
 
-    int i;
-    for (i=0; i<33; i++)
-        fib(i);
+    for (j=0; j<2; j++) {
+        start_counters();
 
-    uint64_t *counters = stop_counters();
 
-    for (i=0; i<6; i++)
-        printf("%s: %lld\n", default_counters[i], counters[i]);
+        for (i=0; i<33; i++)
+            fib(i);
+
+        uint64_t *counters = stop_counters(1);
+
+        for (i=0; i<6; i++)
+            printf("%s: %lld\n", default_counters[i], counters[i]);
+    }
+
     deinit_counters();
 
     return 0;

@@ -6,16 +6,6 @@
 #include <perfmon/pfmlib_perf_event.h>
 #include "perf_util.h"
 
-static const char *default_counters[]={
-    "PERF_COUNT_HW_CPU_CYCLES",
-    "PERF_COUNT_HW_INSTRUCTIONS",
-    "PERF_COUNT_HW_BRANCH_INSTRUCTIONS",
-    "PERF_COUNT_HW_BRANCH_MISSES",
-    "PERF_COUNT_HW_CACHE_L1D:ACCESS",
-    "PERF_COUNT_HW_CACHE_L1D:MISS",
-    NULL
-};
-
 perf_event_desc_t *fds = NULL;
 int num_fds = 0;
 uint64_t *counter_values = NULL;
@@ -81,7 +71,7 @@ int start_counters() {
     return 0;
 }
 
-uint64_t *stop_counters() {
+uint64_t *stop_counters(int reset_counters) {
     int ret, i;
     uint64_t values[3];
 
@@ -124,6 +114,15 @@ uint64_t *stop_counters() {
             values[1],
             values[2]);
 #endif
+
+        /* 
+         * reset counters for later use 
+         */
+        if (reset_counters) {
+            ret = ioctl(fds[i].fd, PERF_EVENT_IOC_RESET, 0);
+            if (ret != 0)
+                warnx("could not reset event%d", i);
+        }
     }
 
     return counter_values;
