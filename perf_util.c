@@ -102,6 +102,7 @@ perf_setup_argv_events(const char **argv, perf_event_desc_t **fds, int *num_fds)
 	return 0;
 error:
 	free(fd);
+	*fds	= NULL;
 	return -1;
 }
 

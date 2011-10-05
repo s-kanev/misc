@@ -56,6 +56,7 @@ int init_counters(const char** counters) {
 
 void deinit_counters() {
     free(fds);
+    fds = NULL;
 
     free(counter_values);
 
@@ -119,7 +120,7 @@ uint64_t *stop_counters() {
             values[2]);
 #endif
 
-            close(fds[i].fd);
+            //close(fds[i].fd);
     }
 
     return counter_values;
