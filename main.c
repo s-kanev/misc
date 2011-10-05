@@ -31,7 +31,7 @@ int main(int argc, char** argv) {
     for (i=0; i<33; i++)
         fib(i);
 
-    long long *counters = stop_counters();
+    uint64_t *counters = stop_counters();
 
     for (i=0; i<6; i++)
         printf("%s: %lld\n", default_counters[i], counters[i]);
