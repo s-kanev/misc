@@ -127,3 +127,53 @@ uint64_t *stop_counters(int reset_counters) {
 
     return counter_values;
 }
+
+/* Same as stop above, but without the parameter
+   for faster calling into. */
+uint64_t *pause_counters() {
+    int ret, i;
+    uint64_t values[3];
+
+    ret = prctl(PR_TASK_PERF_EVENTS_DISABLE);
+    if (ret)
+        fprintf(stderr, "prctl(disable) failed\n");
+
+    /*
+    * now read the results. We use pfp_event_count because
+    * libpfm guarantees that counters for the events always
+    * come first.
+    */
+    memset(values, 0, sizeof(values));
+
+    for (i=0; i < num_fds; i++) {
+        uint64_t val;
+        double ratio;
+
+        ret = read(fds[i].fd, values, sizeof(values));
+        if (ret < sizeof(values)) {
+            if (ret == -1)
+                err(1, "cannot read results: %s", strerror(errno));
+            else
+                warnx("could not read event%d", i);
+        }
+
+        /*
+         * scaling is systematic because we may be sharing the PMU and
+         * thus may be multiplexed
+         */
+        val = perf_scale(values);
+        ratio = perf_scale_ratio(values);
+
+        counter_values[i] = val;
+#ifdef VERBOSE
+        printf("%'20"PRIu64" %s (%.2f%% scaling, ena=%'"PRIu64", run=%'"PRIu64")\n",
+            val,
+            fds[i].name,
+            (1.0-ratio)*100.0,
+            values[1],
+            values[2]);
+#endif
+    }
+
+    return counter_values;
+}
