@@ -26,4 +26,4 @@ extern "C" uint64_t *stop_counters(int reset_counters);
 
 /* Same as the above function with reset_counters == 0.
  * Needed so we can enter it with just a jmp. */
-extern "C" uint64_t *pause();
+extern "C" uint64_t *pause_counters();
