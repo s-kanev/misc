@@ -2,3 +2,5 @@ A collection of minor snippets I've written that may be useful.
 
 Currently contains:
 - burnAtom -- power virus to maximize power on an Atom core.
+- perf_harness -- pintools that inject performance counter measurements in a binary.
+               -- including a light front-end to perfmon2 for easy counter management.
