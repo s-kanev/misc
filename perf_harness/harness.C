@@ -133,14 +133,14 @@ VOID start_stop_replace()
 {
     __asm__ __volatile__ ("push %%eax":::);
     rtn_count++;
-    if (rtn_count == desired_start_count) {
-        __asm__ __volatile__ ("pusha":::);
-        __asm__ __volatile__ ("call start_counters":::);
-        __asm__ __volatile__ ("popa":::);
-    }
     if (rtn_count == desired_stop_count) {
         __asm__ __volatile__ ("pusha":::);
         __asm__ __volatile__ ("call harness_stop":::);
+        __asm__ __volatile__ ("popa":::);
+    }
+    if (rtn_count == desired_start_count) {
+        __asm__ __volatile__ ("pusha":::);
+        __asm__ __volatile__ ("call start_counters":::);
         __asm__ __volatile__ ("popa":::);
     }
 
@@ -150,10 +150,10 @@ VOID start_stop_replace()
 VOID start_stop_ins()
 {
     rtn_count++;
-    if (rtn_count == desired_start_count)
-        start_counters();
     if (rtn_count == desired_stop_count)
         harness_stop();
+    if (rtn_count == desired_start_count)
+        start_counters();
 }
 
 /* ========================================================================== */
