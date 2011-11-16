@@ -1,19 +1,25 @@
+#ifdef __cplusplus
+#define EXTERN extern "C"
+#else
+#define EXTERN
+#endif
+
 /*
  * Initialize counters.
  * Takes NULL-string terminated array of counter names.
  * Returns 0 on success.
  */ 
-extern "C" int init_counters(const char** counters);
+EXTERN int init_counters(const char** counters);
 
 /* Free up counter resources. */
-extern "C" void deinit_counters(void);
+EXTERN void deinit_counters(void);
 
 /* 
  * Start collecting counter values.
  * Returns 0 on success.
  */
 
-extern "C" int start_counters(void);
+EXTERN int start_counters(void);
 
 
 /* 
@@ -22,8 +28,8 @@ extern "C" int start_counters(void);
  * reset_counters != 0 will reset counter state.
  * reset_counters == 0 will keep accumulating them.
  */
-extern "C" uint64_t *stop_counters(int reset_counters);
+EXTERN uint64_t *stop_counters(int reset_counters);
 
 /* Same as the above function with reset_counters == 0.
  * Needed so we can enter it with just a jmp. */
-extern "C" uint64_t *pause_counters();
+EXTERN uint64_t *pause_counters();

@@ -11,6 +11,9 @@ int num_fds = 0;
 uint64_t *counter_values = NULL;
 
 int init_counters(const char** counters) {
+#ifdef VERBOSE
+    fprintf(stderr, "Initing counters\n");
+#endif
     /* Initialize pfm library */
     int i,ret;
 
@@ -61,7 +64,10 @@ void deinit_counters() {
 
 int start_counters() {
     int ret;
-
+#ifdef VERBOSE
+    fprintf(stderr, "Starting counters\n");
+#endif
+ 
     ret = prctl(PR_TASK_PERF_EVENTS_ENABLE);
     if (ret) {
         fprintf(stderr, "prctl(enable) failed\n");
@@ -75,9 +81,17 @@ uint64_t *stop_counters(int reset_counters) {
     int ret, i;
     uint64_t values[3];
 
+#ifdef VERBOSE
+    fprintf(stderr, "Stopping counters\n");
+#endif
+ 
     ret = prctl(PR_TASK_PERF_EVENTS_DISABLE);
     if (ret)
         fprintf(stderr, "prctl(disable) failed\n");
+
+#ifdef VERBOSE
+    fprintf(stderr, "Stopped counters\n");
+#endif
 
     /*
     * now read the results. We use pfp_event_count because
@@ -104,7 +118,7 @@ uint64_t *stop_counters(int reset_counters) {
          */
         val = perf_scale(values);
         ratio = perf_scale_ratio(values);
-
+    
         counter_values[i] = val;
 #ifdef VERBOSE
         printf("%'20"PRIu64" %s (%.2f%% scaling, ena=%'"PRIu64", run=%'"PRIu64")\n",
