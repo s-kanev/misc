@@ -31,10 +31,10 @@ const char *default_counters[NCOUNTERS+1]={
 //    "PERF_COUNT_HW_INSTRUCTIONS",
 //    "PERF_COUNT_HW_CACHE_L1D:ACCESS",
 //    "PERF_COUNT_HW_CACHE_L1D:MISS",
-    "PERF_COUNT_HW_CACHE_L1I:ACCESS",
-    "PERF_COUNT_HW_CACHE_L1I:MISS",
-//    "PERF_COUNT_HW_CACHE_LL:ACCESS",
-//    "PERF_COUNT_HW_CACHE_LL:MISS",
+//    "PERF_COUNT_HW_CACHE_L1I:ACCESS",
+//    "PERF_COUNT_HW_CACHE_L1I:MISS",
+    "PERF_COUNT_HW_CACHE_LL:ACCESS",
+    "PERF_COUNT_HW_CACHE_LL:MISS",
     NULL
 };
 
@@ -44,7 +44,8 @@ KNOB<string> KnobOutFile(KNOB_MODE_WRITEONCE,   "pintool",
         "out_file", "", "File to store counter values");
 KNOB<UINT32> KnobPointNum(KNOB_MODE_WRITEONCE,   "pintool",
         "pnum", "1", "Which point to harness");
-
+KNOB<BOOL> KnobFlushCaches(KNOB_MODE_WRITEONCE,   "pintool",
+        "flush", "0", "Flush caches before collecting");
 
 static UINT64 *counters;
 
@@ -64,6 +65,52 @@ ifstream infile;
 ofstream ofile;
 
 UINT32 eax_store;
+
+// In 8-byte chunks
+#define CACHE_SIZE 1024*1024
+
+// In bytes
+#define LINE_SIZE 64
+
+UINT8 dummy[LINE_SIZE * CACHE_SIZE] __attribute__ ((aligned(4096)));
+
+/* Creates a chained list of memory locations with a stride equal to
+ * the cache line size. Hopping through them should render the cache
+ * useless and always cause a miss. */
+/* ========================================================================== */
+VOID init_cache_flush()
+{
+    register UINT32 i;
+    for (i=0; i<CACHE_SIZE-LINE_SIZE; i += LINE_SIZE)
+        *((ADDRINT*)(dummy + i)) = (ADDRINT)(dummy + i + LINE_SIZE);
+    *((ADDRINT*)(dummy + i)) = 0;
+}
+
+/* ========================================================================== */
+UINT32 flush_cache()
+{
+    register UINT32 i=0;
+    register ADDRINT* ptr = (ADDRINT*)&dummy[0];
+    register ADDRINT* old_ptr = (ADDRINT*)&dummy[0];
+
+    while (*ptr != 0)
+    {
+        old_ptr = ptr;
+        ptr = (ADDRINT*) *ptr;  // Get address of next cache line
+                                // XXX: This should serialize execution
+        *old_ptr = i;           // Overwrite cache line
+        i++;
+    }
+    return *old_ptr;        // Return sth so we don't get optimized away
+}
+
+/* ========================================================================== */
+extern "C" VOID harness_start()
+{
+    if (KnobFlushCaches.Value())
+        flush_cache();
+    start_counters();
+}
 
 /* ========================================================================== */
 extern "C" VOID harness_stop()
@@ -88,7 +135,7 @@ VOID start_replace()
     start_count++;
     if (start_count == desired_start_count) {
         __asm__ __volatile__ ("pusha":::);
-        __asm__ __volatile__ ("call start_counters":::);
+        __asm__ __volatile__ ("call harness_start":::);
         __asm__ __volatile__ ("popa":::);
     }
 
@@ -99,13 +146,13 @@ VOID start_ins()
 {
     start_count++;
     if (start_count == desired_start_count)
-        start_counters();
+        harness_start();
 }
 /* ========================================================================== */
 /* Start capturing right from main */
 VOID main_replace()
 {
-    __asm__ __volatile__ ("call start_counters":::);
+    __asm__ __volatile__ ("call harness_start":::);
     __asm__ __volatile__ ("jmp *%0"::"m"(StartReplaced):);
 }
 
@@ -140,7 +187,7 @@ VOID start_stop_replace()
     }
     if (rtn_count == desired_start_count) {
         __asm__ __volatile__ ("pusha":::);
-        __asm__ __volatile__ ("call start_counters":::);
+        __asm__ __volatile__ ("call harness_start":::);
         __asm__ __volatile__ ("popa":::);
     }
 
@@ -153,7 +200,7 @@ VOID start_stop_ins()
     if (rtn_count == desired_stop_count)
         harness_stop();
     if (rtn_count == desired_start_count)
-        start_counters();
+        harness_start();
 }
 
 /* ========================================================================== */
@@ -283,6 +330,8 @@ INT32 main(INT32 argc, CHAR **argv)
     desired_stop_count = curr_point->end_func_crossings;
 
     IMG_AddInstrumentFunction(StartStopHooks, 0);
+
+    init_cache_flush();
 
     start_counters();
     counters = stop_counters(1);
