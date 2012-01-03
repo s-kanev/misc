@@ -81,7 +81,7 @@ UINT8 dummy[LINE_SIZE * CACHE_SIZE] __attribute__ ((aligned(4096)));
 VOID init_cache_flush()
 {
     register UINT32 i;
-    for (i=0; i<CACHE_SIZE-LINE_SIZE; i += LINE_SIZE)
+    for (i=0; i<(CACHE_SIZE-1)*LINE_SIZE; i += LINE_SIZE)
         *((ADDRINT*)(dummy + i)) = (ADDRINT)(dummy + i + LINE_SIZE);
     *((ADDRINT*)(dummy + i)) = 0;
 }
