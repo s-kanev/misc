@@ -12,6 +12,8 @@
 #include <vector>
 
 #include <unistd.h>
+#include <time.h>
+#include <stdlib.h>
 
 #include "pin.H"
 #include "instlib.H"
@@ -74,16 +76,33 @@ UINT32 eax_store;
 
 UINT8 dummy[LINE_SIZE * CACHE_SIZE] __attribute__ ((aligned(4096)));
 
-/* Creates a chained list of memory locations with a stride equal to
- * the cache line size. Hopping through them should render the cache
- * useless and always cause a miss. */
+/* Creates a chained list of random memory locations 
+ * spaced by the cache line size. Hopping through them should render the cache
+ * and prefetchers useless and always cause a miss. */
 /* ========================================================================== */
 VOID init_cache_flush()
 {
-    register UINT32 i;
-    for (i=0; i<(CACHE_SIZE-1)*LINE_SIZE; i += LINE_SIZE)
-        *((ADDRINT*)(dummy + i)) = (ADDRINT)(dummy + i + LINE_SIZE);
-    *((ADDRINT*)(dummy + i)) = 0;
+    register UINT32 i,j;
+    register ADDRINT *ptr, *old_ptr;
+
+    memset(dummy, 0, LINE_SIZE*CACHE_SIZE * sizeof(dummy[0]));
+
+    j = 0;
+    old_ptr = (ADDRINT*) dummy;
+
+    srand(time(NULL));
+    while (j < CACHE_SIZE-1)
+    {
+        i = (rand() % CACHE_SIZE) * LINE_SIZE;
+        ptr = (ADDRINT*)(dummy+i);
+        if (*ptr == 0)
+        {
+            *old_ptr = (ADDRINT)ptr;
+            old_ptr = ptr;
+            j++;
+        }
+    }
+    *ptr = 0;
 }
 
 /* ========================================================================== */
