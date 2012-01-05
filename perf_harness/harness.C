@@ -67,7 +67,7 @@ ifstream infile;
 ofstream ofile;
 
 // In 8-byte chunks
-#define CACHE_SIZE 1024*1024
+#define CACHE_SIZE (1024*1024)
 
 // In bytes
 #define LINE_SIZE 64
