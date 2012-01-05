@@ -66,8 +66,6 @@ FuncPoint* curr_point;
 ifstream infile;
 ofstream ofile;
 
-UINT32 eax_store;
-
 // In 8-byte chunks
 #define CACHE_SIZE 1024*1024
 
@@ -350,7 +348,8 @@ INT32 main(INT32 argc, CHAR **argv)
 
     IMG_AddInstrumentFunction(StartStopHooks, 0);
 
-    init_cache_flush();
+    if (KnobFlushCaches.Value())
+        init_cache_flush();
 
     start_counters();
     counters = stop_counters(1);
