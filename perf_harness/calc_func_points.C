@@ -66,6 +66,7 @@ VOID PPointHandler(CONTROL_EVENT ev, VOID * v, CONTEXT * ctxt, VOID * ip, THREAD
             lastFuncPoint->start_icount = lastCount;
             lastFuncPoint->start_func_addr = lastRoutine;
             lastFuncPoint->start_func_crossings = rtn_counters[lastRoutine];
+            lastFuncPoint->weight_times_1000 = control.CurrentPpWeightTimesThousand();
 
             cerr << "PinPoint: " << control.CurrentPp(tid) << endl;
             cerr << "Last count: " << lastCount << " Diff: " << icount.Count() - lastCount << endl;
