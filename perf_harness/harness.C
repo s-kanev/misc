@@ -42,10 +42,12 @@ const char *default_counters[NCOUNTERS+1]={
 
 KNOB<string> KnobFuncSitesFile(KNOB_MODE_WRITEONCE,   "pintool",
         "func_file", "", "File to get function points");
-KNOB<string> KnobOutFile(KNOB_MODE_WRITEONCE,   "pintool",
-        "out_file", "", "File to store counter values");
 KNOB<UINT32> KnobPointNum(KNOB_MODE_WRITEONCE,   "pintool",
         "pnum", "1", "Which point to harness");
+KNOB<BOOL> KnobParsecHooks(KNOB_MODE_WRITEONCE,   "pintool",
+        "parsec", "0", "Look for parsec ROI");
+KNOB<string> KnobOutFile(KNOB_MODE_WRITEONCE,   "pintool",
+        "out_file", "", "File to store counter values");
 KNOB<BOOL> KnobFlushCaches(KNOB_MODE_WRITEONCE,   "pintool",
         "flush", "0", "Flush caches before collecting");
 
@@ -221,7 +223,7 @@ VOID start_stop_ins()
 }
 
 /* ========================================================================== */
-VOID StartStopHooks(IMG img, VOID *v)
+VOID FuncPointHooks(IMG img, VOID *v)
 {
     // Separate start and stop instrumentation routines
     if (curr_point->start_func_addr != curr_point->end_func_addr)
@@ -304,6 +306,33 @@ VOID StartStopHooks(IMG img, VOID *v)
 }
 
 /* ========================================================================== */
+VOID ParsecHooks(IMG img, VOID *v)
+{
+    // Add instrumentation to start routine
+    RTN interestStartRtn = RTN_FindByName(img, "__parsec_roi_begin");
+    if(!RTN_Valid(interestStartRtn))
+        return;
+
+    if(!RTN_IsSafeForProbedReplacement(interestStartRtn)) {
+        cerr << " Start routine cannot be probed." << endl;
+        exit(1);
+    }
+    StartReplaced = RTN_ReplaceProbed(interestStartRtn, AFUNPTR(start_replace));
+
+    // Add instrumentation to stop routine
+    RTN interestStopRtn = RTN_FindByName(img, "__parsec_roi_end");
+    if(!RTN_Valid(interestStopRtn))
+        return;
+
+    if(!RTN_IsSafeForProbedReplacement(interestStopRtn)) {
+        cerr << " Stop routine cannot be probed." << endl;
+        exit(1);
+    }
+    StopReplaced = RTN_ReplaceProbed(interestStopRtn, AFUNPTR(stop_replace));
+}
+
+
+/* ========================================================================== */
 INT32 main(INT32 argc, CHAR **argv)
 {
 
@@ -312,41 +341,50 @@ INT32 main(INT32 argc, CHAR **argv)
 
     init_counters(default_counters);
 
-    if(KnobFuncSitesFile.Value().empty()) {
-        cerr << "No function point file specified, exiting." << endl;
-        return 1;
+    if(!KnobParsecHooks.Value()) {
+        if(KnobFuncSitesFile.Value().empty()) {
+            cerr << "No function point file specified, exiting." << endl;
+            return 1;
+        }
+        infile.open(KnobFuncSitesFile.Value().c_str());
+        if(infile.fail()) {
+            cerr << "Couldn't open input file: " << KnobFuncSitesFile.Value() << endl;
+            return 1;
+        }
+
+        do {
+            FuncPoint *point = new FuncPoint();
+            infile >> *point;
+            if(infile.eof() || !infile.good())
+                break;
+
+            allPoints.push_back(point);
+        } while(true);
+
+        if(KnobPointNum.Value() > allPoints.size()) {
+            cerr << "Incorrect point index: " << KnobPointNum.Value() << endl;
+            return 1;
+        }
+
+        curr_point = allPoints[KnobPointNum.Value()-1];
+        desired_start_count = curr_point->start_func_crossings;
+        desired_stop_count = curr_point->end_func_crossings;
+
+        IMG_AddInstrumentFunction(FuncPointHooks, 0);
     }
-    infile.open(KnobFuncSitesFile.Value().c_str());
-    if(infile.fail()) {
-        cerr << "Couldn open file: " << KnobFuncSitesFile.Value() << endl;
-        return 1;
+    else {
+        desired_start_count = 1;
+        desired_stop_count = 1;
+
+        IMG_AddInstrumentFunction(ParsecHooks, 0);
     }
 
     ofile.open(KnobOutFile.Value().c_str());
     if(ofile.fail()) {
-        cerr << "Couldn open file: " << KnobOutFile.Value() << endl;
+        cerr << "Couldn't open out file: " << KnobOutFile.Value() << endl;
         return 1;
     }
 
-    do {
-        FuncPoint *point = new FuncPoint();
-        infile >> *point;
-        if(infile.eof() || !infile.good())
-            break;
-
-        allPoints.push_back(point);
-    } while(true);
-
-    if(KnobPointNum.Value() > allPoints.size()) {
-        cerr << "Incorrect point index: " << KnobPointNum.Value() << endl;
-        return 1;
-    }
-
-    curr_point = allPoints[KnobPointNum.Value()-1];
-    desired_start_count = curr_point->start_func_crossings;
-    desired_stop_count = curr_point->end_func_crossings;
-
-    IMG_AddInstrumentFunction(StartStopHooks, 0);
 
     if (KnobFlushCaches.Value())
         init_cache_flush();
