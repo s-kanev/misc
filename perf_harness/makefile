@@ -26,7 +26,7 @@
 #
 PIN_HOME ?= /home/skanev/pin/pin-2.8-36111-gcc.3.4.6-ia32_intel64-linux
 TARGET = ia32
-
+PERFLIB = vtl
 ##############################################################
 #
 # set up and include *.config files
@@ -68,7 +68,20 @@ endif
 TOOL_ROOTS = harness calc_func_points
 
 TOOLS = $(TOOL_ROOTS:%=$(OBJDIR)%$(PINTOOL_SUFFIX))
+
+ifeq ($(PERFLIB), pfm)
 PFMDIR = libpfm
+COUNTERINCDIR = $(PFMDIR)
+COUNTERLDDIR = $(PFMDIR)
+COUNTERLIB = $(PFMDIR)/libwrappedpfm.a
+COUNTEROBJ = $(OBJDIR)pfm_wrapper.o
+else
+VTLDIR = .
+COUNTERINCDIR = $(VTLDIR)
+COUNTERLDDIR = $(VTLDIR)
+COUNTERLIB = $(VTLDIR)/libittnotify.a
+COUNTEROBJ = $(OBJDIR)vtl_wrapper.o
+endif
 
 ##############################################################
 #
@@ -77,7 +90,7 @@ PFMDIR = libpfm
 ##############################################################
 
 all: tools
-tools: $(OBJDIR) $(TOOLS) $(OBJDIR)cp-pin.exe
+tools: $(OBJDIR) $(TOOLS) $(OBJDIR)cp-pin.exe $(COUNTEROBJ)
 test: $(OBJDIR) $(TOOL_ROOTS:%=%.test)
 
 MyPinTool.test: $(OBJDIR)cp-pin.exe
@@ -90,15 +103,15 @@ $(OBJDIR):
 	mkdir -p $(OBJDIR)
 
 $(OBJDIR)%.o : %.C
-	$(CXX) -I$(PFMDIR) -c $(CXXFLAGS) $(PIN_CXXFLAGS) ${OUTOPT}$@ $<
+	$(CXX) -I$(COUNTERINCDIR) -c $(CXXFLAGS) $(PIN_CXXFLAGS) ${OUTOPT}$@ $<
 
 $(OBJDIR)%.o : %.cpp
-	$(CXX) -c $(CXXFLAGS) $(PIN_CXXFLAGS) ${OUTOPT}$@ $<
+	$(CXX) -I$(COUNTERINCDIR) -c $(CXXFLAGS) $(PIN_CXXFLAGS) ${OUTOPT}$@ $<
 
-$(TOOLS): $(PIN_LIBNAMES) $(PFMDIR)/libwrappedpfm.a
+$(TOOLS): $(PIN_LIBNAMES) $(COUNTEROBJ) $(COUNTERLIB)
 
 $(TOOLS): %$(PINTOOL_SUFFIX) : %.o 
-	${PIN_LD} -I$(PFMDIR) -L$(PFMDIR) $(PIN_LDFLAGS) $(LINK_DEBUG) ${LINK_OUT} $@ $< ${PIN_LPATHS} $(PIN_LIBS) $(DBG) $(PFMDIR)/libwrappedpfm.a
+	${PIN_LD} -I$(COUNTERINCDIR) -L$(COUNTERLDDIR) $(PIN_LDFLAGS) -pthread $(LINK_DEBUG) ${LINK_OUT} $@ $< ${PIN_LPATHS} $(PIN_LIBS) $(DBG) $(COUNTEROBJ) $(COUNTERLIB)
 
 ## cleaning
 clean:

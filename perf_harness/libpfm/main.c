@@ -25,22 +25,22 @@ int fib(int n)
 int main(int argc, char** argv) {
     int i,j;
 
-    init_counters(default_counters);
+    pfm_init_counters(default_counters);
 
     for (j=0; j<2; j++) {
-        start_counters();
+        pfm_start_counters();
 
 
         for (i=0; i<33; i++)
             fib(i);
 
-        uint64_t *counters = stop_counters(1);
+        uint64_t *counters = pfm_stop_counters(1);
 
         for (i=0; i<6; i++)
             printf("%s: %lld\n", default_counters[i], counters[i]);
     }
 
-    deinit_counters();
+    pfm_deinit_counters();
 
     return 0;
 }

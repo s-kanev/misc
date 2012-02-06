@@ -10,7 +10,7 @@ perf_event_desc_t *fds = NULL;
 int num_fds = 0;
 uint64_t *counter_values = NULL;
 
-int init_counters(const char** counters) {
+int pfm_init_counters(const char** counters) {
 #ifdef VERBOSE
     fprintf(stderr, "Initing counters\n");
 #endif
@@ -47,7 +47,7 @@ int init_counters(const char** counters) {
     return 0;
 }
 
-void deinit_counters() {
+void pfm_deinit_counters() {
     int i;
 
     for (i=0; i<num_fds; i++)
@@ -62,7 +62,7 @@ void deinit_counters() {
     pfm_terminate();
 }
 
-int start_counters() {
+int pfm_start_counters() {
     int ret;
 #ifdef VERBOSE
     fprintf(stderr, "Starting counters\n");
@@ -77,7 +77,7 @@ int start_counters() {
     return 0;
 }
 
-uint64_t *stop_counters(int reset_counters) {
+uint64_t *pfm_stop_counters(int reset_counters) {
     int ret, i;
     uint64_t values[3];
 
@@ -144,7 +144,7 @@ uint64_t *stop_counters(int reset_counters) {
 
 /* Same as stop above, but without the parameter
    for faster calling into. */
-uint64_t *pause_counters() {
+uint64_t *pfm_pause_counters() {
     int ret, i;
     uint64_t values[3];
 

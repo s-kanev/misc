@@ -19,26 +19,11 @@
 #include "instlib.H"
 
 #include "func_point.h"
-#include "wrapped_pfm.h"
+#include "perflib.h"
 
 using namespace INSTLIB;
 using namespace std;
 
-
-static const int NCOUNTERS = 2;
-const char *default_counters[NCOUNTERS+1]={
-//    "PERF_COUNT_HW_BRANCH_INSTRUCTIONS",
-//    "PERF_COUNT_HW_BRANCH_MISSES",
-//    "PERF_COUNT_HW_CPU_CYCLES",
-//    "PERF_COUNT_HW_INSTRUCTIONS",
-//    "PERF_COUNT_HW_CACHE_L1D:ACCESS",
-//    "PERF_COUNT_HW_CACHE_L1D:MISS",
-//    "PERF_COUNT_HW_CACHE_L1I:ACCESS",
-//    "PERF_COUNT_HW_CACHE_L1I:MISS",
-    "PERF_COUNT_HW_CACHE_LL:ACCESS",
-    "PERF_COUNT_HW_CACHE_LL:MISS",
-    NULL
-};
 
 KNOB<string> KnobFuncSitesFile(KNOB_MODE_WRITEONCE,   "pintool",
         "func_file", "", "File to get function points");
@@ -50,8 +35,6 @@ KNOB<string> KnobOutFile(KNOB_MODE_WRITEONCE,   "pintool",
         "out_file", "", "File to store counter values");
 KNOB<BOOL> KnobFlushCaches(KNOB_MODE_WRITEONCE,   "pintool",
         "flush", "0", "Flush caches before collecting");
-
-static UINT64 *counters;
 
 UINT32 start_count = 0;
 UINT32 stop_count = 0;
@@ -128,18 +111,16 @@ extern "C" VOID harness_start()
 {
     if (KnobFlushCaches.Value())
         flush_cache();
+    cerr << "START COLLECTING" << endl;
     start_counters();
 }
 
 /* ========================================================================== */
 extern "C" VOID harness_stop()
 {
-    int i;
+    cerr << "STOP COLLECTING" << endl;
     pause_counters();
-    for(i=0; i<NCOUNTERS; i++) {
-        ofile << default_counters[i] << ": " << counters[i] << endl;
-    }
-    ofile.close();
+    print_counters(ofile);
     PIN_ExitProcess(0);
 }
 
@@ -193,6 +174,16 @@ VOID stop_ins()
     if (stop_count == desired_stop_count)
         harness_stop();
 }
+
+/* ========================================================================== */
+/* Stop capturing right from _exit */
+VOID exit_replace()
+{
+    __asm__ __volatile__ ("call harness_stop":::);
+    __asm__ __volatile__ ("jmp *%0"::"m"(StopReplaced):);
+}
+
+
 /* ========================================================================== */
 /* Same as above, but when start and stop are based on the same function counts */
 VOID start_stop_replace()
@@ -228,54 +219,44 @@ VOID FuncPointHooks(IMG img, VOID *v)
     // Separate start and stop instrumentation routines
     if (curr_point->start_func_addr != curr_point->end_func_addr)
     {
+        RTN interestStartRtn;
         // Add instrumentation to start routine
         if (curr_point->start_func_addr == 0 &&
-            curr_point->start_func_crossings == 0) {
+            curr_point->start_func_crossings == 0)
             //Special case -- starting from beginning
-            RTN interestStartRtn = RTN_FindByName(img, "main");
-            if(!RTN_Valid(interestStartRtn)) {
-                cerr << " Couldn't find main " << endl;
-                exit(1);
-            }
-            if(!RTN_IsSafeForProbedReplacement(interestStartRtn)) {
-                cerr << " Main cannot be probed: " << endl;
-                exit(1);
-            }
-            StartReplaced = RTN_ReplaceProbed(interestStartRtn, AFUNPTR(main_replace));
-        } else {
-            RTN interestStartRtn = RTN_FindByAddress(curr_point->start_func_addr);
-            if(!RTN_Valid(interestStartRtn)) {
-                cerr << " Start routine address invalid: "
-                     << hex << curr_point->start_func_addr << endl;
-                exit(1);
-            }
-            if(!RTN_IsSafeForProbedReplacement(interestStartRtn)) {
-                cerr << " Start routine cannot be probed: "
-                     << hex << curr_point->start_func_addr << endl;
-                exit(1);
-            }
-            StartReplaced = RTN_ReplaceProbed(interestStartRtn, AFUNPTR(start_replace));
-/*            if(!RTN_IsSafeForProbedInsertion(interestStartRtn)) {
-                cerr << " Start routine cannot be probed: "
-                     << hex << curr_point->start_func_addr << endl;
-                exit(1);
-            }
-            RTN_InsertCallProbed(interestStartRtn, IPOINT_BEFORE, AFUNPTR(start_ins), IARG_END);*/
+            interestStartRtn = RTN_FindByName(img, "main");
+        else
+            interestStartRtn = RTN_FindByAddress(curr_point->start_func_addr);
+
+        if(RTN_Valid(interestStartRtn) && 
+           RTN_IsSafeForProbedReplacement(interestStartRtn)) {
+                StartReplaced = RTN_ReplaceProbed(interestStartRtn, AFUNPTR(main_replace));
+                cerr << "Start point replaced." << endl;
         }
+
+/*      if(!RTN_IsSafeForProbedInsertion(interestStartRtn)) {
+            cerr << " Start routine cannot be probed: "
+                 << hex << curr_point->start_func_addr << endl;
+            exit(1);
+        }
+        RTN_InsertCallProbed(interestStartRtn, IPOINT_BEFORE, AFUNPTR(start_ins), IARG_END);*/
+
+        RTN interestStopRtn;
         // Add instrumentation to stop routine
-        RTN interestStopRtn = RTN_FindByAddress(curr_point->end_func_addr);
-        if(!RTN_Valid(interestStopRtn)) {
-            cerr << " Stop routine address invalid: "
-                 << hex << curr_point->end_func_addr << endl;
-            exit(1);
+        if (curr_point->end_func_addr == (ADDRINT)-1 &&
+            curr_point->end_func_crossings == 0) {
+            // Special case -- stop routine is exit point
+            interestStopRtn = RTN_FindByName(img, "_exit");
+        } else
+            interestStopRtn = RTN_FindByAddress(curr_point->end_func_addr);
+
+        if(RTN_Valid(interestStopRtn) &&
+           RTN_IsSafeForProbedReplacement(interestStopRtn)) {
+            StopReplaced = RTN_ReplaceProbed(interestStopRtn, AFUNPTR(exit_replace));
+            cerr << "Stop point replaced." << endl;
         }
-        if(!RTN_IsSafeForProbedReplacement(interestStopRtn)) {
-            cerr << " Stop routine cannot be probed: "
-                 << hex << curr_point->end_func_addr << endl;
-            exit(1);
-        }
-        StopReplaced = RTN_ReplaceProbed(interestStopRtn, AFUNPTR(stop_replace));
-/*        if(!RTN_IsSafeForProbedInsertion(interestStopRtn)) {
+
+    /*  if(!RTN_IsSafeForProbedInsertion(interestStopRtn)) {
             cerr << " Stop routine cannot be probed: "
                  << hex << curr_point->end_func_addr << endl;
             exit(1);
@@ -296,6 +277,7 @@ VOID FuncPointHooks(IMG img, VOID *v)
             exit(1);
         }
         StartStopReplaced = RTN_ReplaceProbed(interestRtn, AFUNPTR(start_stop_replace));
+        cerr << "Start/stop point replaced." << endl;
 /*        if(!RTN_IsSafeForProbedInsertion(interestRtn)) {
             cerr << " Start routine cannot be probed: "
                  << hex << curr_point->start_func_addr << endl;
@@ -339,7 +321,7 @@ INT32 main(INT32 argc, CHAR **argv)
     PIN_Init(argc, argv);
     PIN_InitSymbols();
 
-    init_counters(default_counters);
+    init_counters();
 
     if(!KnobParsecHooks.Value()) {
         if(KnobFuncSitesFile.Value().empty()) {
@@ -389,8 +371,8 @@ INT32 main(INT32 argc, CHAR **argv)
     if (KnobFlushCaches.Value())
         init_cache_flush();
 
-    start_counters();
-    counters = stop_counters(1);
+//    start_counters();
+//    stop_counters(1);
 
     PIN_StartProgramProbed();
 
