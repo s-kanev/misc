@@ -220,17 +220,22 @@ VOID FuncPointHooks(IMG img, VOID *v)
     if (curr_point->start_func_addr != curr_point->end_func_addr)
     {
         RTN interestStartRtn;
+        AFUNPTR replacementStartAddr;
         // Add instrumentation to start routine
         if (curr_point->start_func_addr == 0 &&
-            curr_point->start_func_crossings == 0)
+            curr_point->start_func_crossings == 0) {
             //Special case -- starting from beginning
-            interestStartRtn = RTN_FindByName(img, "main");
-        else
-            interestStartRtn = RTN_FindByAddress(curr_point->start_func_addr);
+                interestStartRtn = RTN_FindByName(img, "main");
+                replacementStartAddr = AFUNPTR(main_replace);
+            }
+        else {
+                interestStartRtn = RTN_FindByAddress(curr_point->start_func_addr);
+                replacementStartAddr = AFUNPTR(start_replace);
+            }
 
         if(RTN_Valid(interestStartRtn) && 
            RTN_IsSafeForProbedReplacement(interestStartRtn)) {
-                StartReplaced = RTN_ReplaceProbed(interestStartRtn, AFUNPTR(main_replace));
+                StartReplaced = RTN_ReplaceProbed(interestStartRtn, replacementStartAddr);
                 cerr << "Start point replaced." << endl;
         }
 
@@ -242,17 +247,21 @@ VOID FuncPointHooks(IMG img, VOID *v)
         RTN_InsertCallProbed(interestStartRtn, IPOINT_BEFORE, AFUNPTR(start_ins), IARG_END);*/
 
         RTN interestStopRtn;
+        AFUNPTR replacementStopAddr;
         // Add instrumentation to stop routine
         if (curr_point->end_func_addr == (ADDRINT)-1 &&
             curr_point->end_func_crossings == 0) {
             // Special case -- stop routine is exit point
             interestStopRtn = RTN_FindByName(img, "_exit");
-        } else
+            replacementStopAddr = AFUNPTR(exit_replace);
+        } else {
             interestStopRtn = RTN_FindByAddress(curr_point->end_func_addr);
+            replacementStopAddr = AFUNPTR(stop_replace);
+        }
 
         if(RTN_Valid(interestStopRtn) &&
            RTN_IsSafeForProbedReplacement(interestStopRtn)) {
-            StopReplaced = RTN_ReplaceProbed(interestStopRtn, AFUNPTR(exit_replace));
+            StopReplaced = RTN_ReplaceProbed(interestStopRtn, replacementStopAddr);
             cerr << "Stop point replaced." << endl;
         }
 

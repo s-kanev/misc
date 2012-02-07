@@ -26,7 +26,7 @@
 #
 PIN_HOME ?= /home/skanev/pin/pin-2.8-36111-gcc.3.4.6-ia32_intel64-linux
 TARGET = ia32
-PERFLIB = vtl
+PERFLIB = pfm
 ##############################################################
 #
 # set up and include *.config files
