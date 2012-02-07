@@ -15,8 +15,8 @@ const char *default_counters[NCOUNTERS+1]={
 //    "PERF_COUNT_HW_CACHE_L1D:MISS",
 //    "PERF_COUNT_HW_CACHE_L1I:ACCESS",
 //    "PERF_COUNT_HW_CACHE_L1I:MISS",
-    "PERF_COUNT_HW_CACHE_LL:ACCESS",
-    "PERF_COUNT_HW_CACHE_LL:MISS",
+    "L2_RQSTS",
+    "L2_LINES_IN",
     NULL
 };
 
