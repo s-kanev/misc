@@ -111,14 +111,12 @@ extern "C" VOID harness_start()
 {
     if (KnobFlushCaches.Value())
         flush_cache();
-    cerr << "START COLLECTING" << endl;
     start_counters();
 }
 
 /* ========================================================================== */
 extern "C" VOID harness_stop()
 {
-    cerr << "STOP COLLECTING" << endl;
     pause_counters();
     print_counters(ofile);
     PIN_ExitProcess(0);
@@ -380,8 +378,8 @@ INT32 main(INT32 argc, CHAR **argv)
     if (KnobFlushCaches.Value())
         init_cache_flush();
 
-//    start_counters();
-//    stop_counters(1);
+    start_counters();
+    stop_counters(1);
 
     PIN_StartProgramProbed();
 
