@@ -19,11 +19,13 @@
 #include "instlib.H"
 
 #include "func_point.h"
-#include "perflib.h"
 
 using namespace INSTLIB;
 using namespace std;
 
+extern "C" VOID harness_start();
+extern "C" VOID harness_stop();
+extern "C" VOID harness_init();
 
 KNOB<string> KnobFuncSitesFile(KNOB_MODE_WRITEONCE,   "pintool",
         "func_file", "", "File to get function points");
@@ -31,8 +33,6 @@ KNOB<UINT32> KnobPointNum(KNOB_MODE_WRITEONCE,   "pintool",
         "pnum", "1", "Which point to harness");
 KNOB<BOOL> KnobParsecHooks(KNOB_MODE_WRITEONCE,   "pintool",
         "parsec", "0", "Look for parsec ROI");
-KNOB<string> KnobOutFile(KNOB_MODE_WRITEONCE,   "pintool",
-        "out_file", "", "File to store counter values");
 KNOB<BOOL> KnobFlushCaches(KNOB_MODE_WRITEONCE,   "pintool",
         "flush", "0", "Flush caches before collecting");
 
@@ -49,7 +49,6 @@ vector<FuncPoint*> allPoints;
 FuncPoint* curr_point;
 
 ifstream infile;
-ofstream ofile;
 
 // In 8-byte chunks
 #define CACHE_SIZE (1024*1024)
@@ -104,22 +103,6 @@ UINT32 flush_cache()
         i++;
     }
     return *old_ptr;        // Return sth so we don't get optimized away
-}
-
-/* ========================================================================== */
-extern "C" VOID harness_start()
-{
-    if (KnobFlushCaches.Value())
-        flush_cache();
-    start_counters();
-}
-
-/* ========================================================================== */
-extern "C" VOID harness_stop()
-{
-    pause_counters();
-    print_counters(ofile);
-    PIN_ExitProcess(0);
 }
 
 /* XXX: The following functions are hand-optimized for minimal overhead.
@@ -328,8 +311,6 @@ INT32 main(INT32 argc, CHAR **argv)
     PIN_Init(argc, argv);
     PIN_InitSymbols();
 
-    init_counters();
-
     if(!KnobParsecHooks.Value()) {
         if(KnobFuncSitesFile.Value().empty()) {
             cerr << "No function point file specified, exiting." << endl;
@@ -368,18 +349,11 @@ INT32 main(INT32 argc, CHAR **argv)
         IMG_AddInstrumentFunction(ParsecHooks, 0);
     }
 
-    ofile.open(KnobOutFile.Value().c_str());
-    if(ofile.fail()) {
-        cerr << "Couldn't open out file: " << KnobOutFile.Value() << endl;
-        return 1;
-    }
-
 
     if (KnobFlushCaches.Value())
         init_cache_flush();
 
-    start_counters();
-    stop_counters(1);
+    harness_init();
 
     PIN_StartProgramProbed();
 

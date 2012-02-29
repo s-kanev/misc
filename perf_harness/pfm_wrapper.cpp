@@ -9,14 +9,20 @@ const int NCOUNTERS = 2;
 const char *default_counters[NCOUNTERS+1]={
 //    "PERF_COUNT_HW_BRANCH_INSTRUCTIONS",
 //    "PERF_COUNT_HW_BRANCH_MISSES",
+//    "BACLEARS",
+//    "BR_INST_DECODED",
+//    "BR_INST_RETIRED:MISPRED",
 //    "PERF_COUNT_HW_CPU_CYCLES",
 //    "PERF_COUNT_HW_INSTRUCTIONS",
 //    "PERF_COUNT_HW_CACHE_L1D:ACCESS",
 //    "PERF_COUNT_HW_CACHE_L1D:MISS",
 //    "PERF_COUNT_HW_CACHE_L1I:ACCESS",
 //    "PERF_COUNT_HW_CACHE_L1I:MISS",
-    "L2_RQSTS",
-    "L2_LINES_IN",
+//    "L2_RQSTS",
+//    "L2_LINES_IN",
+//    "L1D_CACHE:ALL_REF",
+    "L1D_CACHE:ALL_REF",
+    "L1D_CACHE:REPL",
     NULL
 };
 
@@ -41,12 +47,10 @@ void init_counters(void)
 {
     pfm_init_counters(default_counters);
 }
-
 void print_counters(std::ofstream& ofile)
 {
     int i;
     for(i=0; i<NCOUNTERS; i++) {
         ofile << default_counters[i] << ": " << counters[i] << std::endl;
     }
-    ofile.close();
 }

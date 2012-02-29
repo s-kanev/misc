@@ -31,5 +31,5 @@ void init_counters(void)
 
 void print_counters(std::ofstream &ofile)
 {
-    ofile.close();
+//    ofile.close();
 }

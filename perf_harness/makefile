@@ -65,7 +65,7 @@ endif
 ##############################################################
 
 
-TOOL_ROOTS = harness calc_func_points
+TOOL_ROOTS = harness harness_power calc_func_points
 
 TOOLS = $(TOOL_ROOTS:%=$(OBJDIR)%$(PINTOOL_SUFFIX))
 
@@ -82,6 +82,8 @@ COUNTERLDDIR = $(VTLDIR)
 COUNTERLIB = $(VTLDIR)/libittnotify.a
 COUNTEROBJ = $(OBJDIR)vtl_wrapper.o
 endif
+
+TOOLOBJ = $(OBJDIR)perf_harness.o $(OBJDIR)power_harness.o
 
 ##############################################################
 #
@@ -108,10 +110,19 @@ $(OBJDIR)%.o : %.C
 $(OBJDIR)%.o : %.cpp
 	$(CXX) -I$(COUNTERINCDIR) -c $(CXXFLAGS) $(PIN_CXXFLAGS) ${OUTOPT}$@ $<
 
-$(TOOLS): $(PIN_LIBNAMES) $(COUNTEROBJ) $(COUNTERLIB)
+$(TOOLS): $(PIN_LIBNAMES) $(TOOLOBJ) $(COUNTEROBJ) $(COUNTERLIB)
 
-$(TOOLS): %$(PINTOOL_SUFFIX) : %.o 
-	${PIN_LD} -I$(COUNTERINCDIR) -L$(COUNTERLDDIR) $(PIN_LDFLAGS) -pthread $(LINK_DEBUG) ${LINK_OUT} $@ $< ${PIN_LPATHS} $(PIN_LIBS) $(DBG) $(COUNTEROBJ) $(COUNTERLIB)
+$(OBJDIR)harness.so: %$(PINTOOL_SUFFIX): %.o
+	${PIN_LD} -I$(COUNTERINCDIR) -L$(COUNTERLDDIR) $(PIN_LDFLAGS) $(LINK_DEBUG) ${LINK_OUT} $@ $< ${PIN_LPATHS} $(PIN_LIBS) $(DBG) $(OBJDIR)perf_harness.o $(COUNTEROBJ) $(COUNTERLIB)
+
+$(OBJDIR)harness_power.so: $(OBJDIR)harness.o
+	${PIN_LD} $(PIN_LDFLAGS) $(LINK_DEBUG) ${LINK_OUT} $@ $< ${PIN_LPATHS} $(PIN_LIBS) $(DBG) $(OBJDIR)power_harness.o
+
+$(OBJDIR)calc_func_points.so: %$(PINTOOL_SUFFIX): %.o
+	${PIN_LD} $(PIN_LDFLAGS) $(LINK_DEBUG) ${LINK_OUT} $@ $< ${PIN_LPATHS} $(PIN_LIBS) $(DBG)
+
+#$(TOOLS): %$(PINTOOL_SUFFIX) : %.o 
+#	${PIN_LD} -I$(COUNTERINCDIR) -L$(COUNTERLDDIR) $(PIN_LDFLAGS) $(LINK_DEBUG) ${LINK_OUT} $@ $< ${PIN_LPATHS} $(PIN_LIBS) $(DBG) $(TOOLOBJ) $(COUNTEROBJ) $(COUNTERLIB)
 
 ## cleaning
 clean:
