@@ -24,8 +24,8 @@
 #    Pin was installed. This can also be set on the command line,
 #    or as an environment variable.
 #
-PIN_HOME ?= /home/skanev/pin/pin-2.8-36111-gcc.3.4.6-ia32_intel64-linux
-TARGET = ia32
+PIN_HOME ?= /home/skanev/pin/2.12
+TARGET = ia32e
 PERFLIB = pfm
 ##############################################################
 #

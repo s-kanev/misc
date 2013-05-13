@@ -56,6 +56,18 @@ ifstream infile;
 // In bytes
 #define LINE_SIZE 64
 
+#ifdef _LP64
+#define rAX "%%rax"
+#define PUSHA "push %%rax; push %%rbx; push %%rcx; push %%rdx; push %%rsi; push %%rdi; push %%rbp; push $0;\
+               push %%r9; push %%r10; push %%r11; push %%r12; push %%r13; push %%r14; push %%r15"
+#define POPA  "pop %%r15; pop %%r14; pop %%r13; pop %%r12; pop %%r11; pop %%r10; pop %%r9;\
+               pop %%rbp; pop %%rbp; pop %%rdi; pop %%rsi; pop %%rdx; pop %%rcx; pop %%rbx; pop %%rax"
+#else
+#define rAX "%%eax"
+#define PUSHA "pusha"
+#define POPA  "popa"
+#endif
+
 UINT8 dummy[LINE_SIZE * CACHE_SIZE] __attribute__ ((aligned(4096)));
 
 /* Creates a chained list of random memory locations 
@@ -112,15 +124,15 @@ UINT32 flush_cache()
 /* Start capturing once we hit the correct call number */
 VOID start_replace()
 {
-    __asm__ __volatile__ ("push %%eax":::);
+    __asm__ __volatile__ ("push "rAX:::);
     start_count++;
     if (start_count == desired_start_count) {
-        __asm__ __volatile__ ("pusha":::);
+        __asm__ __volatile__ (PUSHA:::);
         __asm__ __volatile__ ("call harness_start":::);
-        __asm__ __volatile__ ("popa":::);
+        __asm__ __volatile__ (POPA:::);
     }
 
-    __asm__ __volatile__ ("pop %%eax":::);
+    __asm__ __volatile__ ("pop "rAX:::);
     __asm__ __volatile__ ("jmp *%0"::"m"(StartReplaced):);
 }
 VOID start_ins()
@@ -141,12 +153,12 @@ VOID main_replace()
 /* Start capturing and exit after we find the right call number */
 VOID stop_replace()
 {
-    __asm__ __volatile__ ("push %%eax":::);
+    __asm__ __volatile__ ("push "rAX:::);
     stop_count++;
     if (stop_count == desired_stop_count)
         __asm__ __volatile__ ("call harness_stop":::);
 
-    __asm__ __volatile__ ("pop %%eax":::);
+    __asm__ __volatile__ ("pop "rAX:::);
     __asm__ __volatile__ ("jmp *%0"::"m"(StopReplaced):);
 }
 VOID stop_ins()
@@ -169,20 +181,20 @@ VOID exit_replace()
 /* Same as above, but when start and stop are based on the same function counts */
 VOID start_stop_replace()
 {
-    __asm__ __volatile__ ("push %%eax":::);
+    __asm__ __volatile__ ("push "rAX:::);
     rtn_count++;
     if (rtn_count == desired_stop_count) {
-        __asm__ __volatile__ ("pusha":::);
+        __asm__ __volatile__ (PUSHA:::);
         __asm__ __volatile__ ("call harness_stop":::);
-        __asm__ __volatile__ ("popa":::);
+        __asm__ __volatile__ (POPA:::);
     }
     if (rtn_count == desired_start_count) {
-        __asm__ __volatile__ ("pusha":::);
+        __asm__ __volatile__ (PUSHA:::);
         __asm__ __volatile__ ("call harness_start":::);
-        __asm__ __volatile__ ("popa":::);
+        __asm__ __volatile__ (POPA:::);
     }
 
-    __asm__ __volatile__ ("pop %%eax":::);
+    __asm__ __volatile__ ("pop "rAX:::);
     __asm__ __volatile__ ("jmp *%0"::"m"(StartStopReplaced):);
 }
 VOID start_stop_ins()

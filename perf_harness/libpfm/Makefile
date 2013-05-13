@@ -3,12 +3,21 @@ OEXT=o
 EEXT=
 AR=ar rcs
 
-CFLAGS=-g -m32 -I.
-LDFLAGS=-g -m32
+ifeq (${TARGET},ia32)
+    CFLAGS=-m32
+    LDFLAGS=-m32
+    LIBPFM=./libpfm_32.a
+else
+    CFLAGS=
+    LDFLAGS=
+    LIBPFM=./libpfm_64.a
+endif
+
+CFLAGS+= -fPIC -g -I.
+LDFLAGS+= -g 
 
 #CFLAGS+=-DVERBOSE
 
-LIBPFM=./libpfm.a
 
 OUTLIB=libwrappedpfm.a
 
