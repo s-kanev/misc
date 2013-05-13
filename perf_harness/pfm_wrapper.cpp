@@ -12,8 +12,8 @@ const char *default_counters[NCOUNTERS+1]={
 //    "BACLEARS",
 //    "BR_INST_DECODED",
 //    "BR_INST_RETIRED:MISPRED",
-//    "PERF_COUNT_HW_CPU_CYCLES",
-//    "PERF_COUNT_HW_INSTRUCTIONS",
+    "PERF_COUNT_HW_CPU_CYCLES",
+    "PERF_COUNT_HW_INSTRUCTIONS",
 //    "PERF_COUNT_HW_CACHE_L1D:ACCESS",
 //    "PERF_COUNT_HW_CACHE_L1D:MISS",
 //    "PERF_COUNT_HW_CACHE_L1I:ACCESS",
@@ -21,8 +21,8 @@ const char *default_counters[NCOUNTERS+1]={
 //    "L2_RQSTS",
 //    "L2_LINES_IN",
 //    "L1D_CACHE:ALL_REF",
-    "L1D_CACHE:ALL_REF",
-    "L1D_CACHE:REPL",
+//    "L1D_CACHE:ALL_REF",
+//    "L1D_CACHE:REPL",
     NULL
 };
 

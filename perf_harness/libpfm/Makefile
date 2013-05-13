@@ -8,12 +8,12 @@ ifeq (${TARGET},ia32)
     LDFLAGS=-m32
     LIBPFM=./libpfm_32.a
 else
-    CFLAGS=
+    CFLAGS= -fPIC
     LDFLAGS=
     LIBPFM=./libpfm_64.a
 endif
 
-CFLAGS+= -fPIC -g -I.
+CFLAGS+= -g -I.
 LDFLAGS+= -g 
 
 #CFLAGS+=-DVERBOSE
