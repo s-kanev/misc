@@ -68,6 +68,16 @@ ifstream infile;
 #define POPA  "popa"
 #endif
 
+// On x86_64 with fPIC rdx is used for address calculation
+// and seems to be callee-save
+#ifdef _LP64
+#define PUSH_rDX __asm__ __volatile__ ("push %%rdx":::)
+#define POP_rDX  __asm__ __volatile__ ("pop %%rdx":::)
+#else
+#define PUSH_rDX
+#define POP_rDX
+#endif
+
 UINT8 dummy[LINE_SIZE * CACHE_SIZE] __attribute__ ((aligned(4096)));
 
 /* Creates a chained list of random memory locations 
@@ -125,6 +135,7 @@ UINT32 flush_cache()
 VOID start_replace()
 {
     __asm__ __volatile__ ("push "rAX:::);
+    PUSH_rDX;
     start_count++;
     if (start_count == desired_start_count) {
         __asm__ __volatile__ (PUSHA:::);
@@ -132,6 +143,7 @@ VOID start_replace()
         __asm__ __volatile__ (POPA:::);
     }
 
+    POP_rDX;
     __asm__ __volatile__ ("pop "rAX:::);
     __asm__ __volatile__ ("jmp *%0"::"m"(StartReplaced):);
 }
@@ -154,10 +166,12 @@ VOID main_replace()
 VOID stop_replace()
 {
     __asm__ __volatile__ ("push "rAX:::);
+    PUSH_rDX;
     stop_count++;
     if (stop_count == desired_stop_count)
         __asm__ __volatile__ ("call harness_stop":::);
 
+    POP_rDX;
     __asm__ __volatile__ ("pop "rAX:::);
     __asm__ __volatile__ ("jmp *%0"::"m"(StopReplaced):);
 }
@@ -182,6 +196,7 @@ VOID exit_replace()
 VOID start_stop_replace()
 {
     __asm__ __volatile__ ("push "rAX:::);
+    PUSH_rDX;
     rtn_count++;
     if (rtn_count == desired_stop_count) {
         __asm__ __volatile__ (PUSHA:::);
@@ -194,6 +209,7 @@ VOID start_stop_replace()
         __asm__ __volatile__ (POPA:::);
     }
 
+    POP_rDX;
     __asm__ __volatile__ ("pop "rAX:::);
     __asm__ __volatile__ ("jmp *%0"::"m"(StartStopReplaced):);
 }
